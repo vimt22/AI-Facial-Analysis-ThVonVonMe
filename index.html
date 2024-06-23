@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Facial Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        #imagePreview {
+            max-width: 100%;
+            margin-bottom: 20px;
+            display: none;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+            display: none;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Facial Analysis</h1>
+        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        <button onclick="document.getElementById('imageInput').click()">Upload Image</button>
+        <img id="imagePreview" src="" alt="Preview">
+        <button onclick="analyzeSkinStatus()">Analyze Skin Status</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const apiKey = 'uyOS-FeVqsMFbQbOuAJy7C9p9jmUgrt9';
+        const apiSecret = 'pydgc6wKv6u_nCtvI4_hY-0iG09owQ_4';
+
+        
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('imagePreview');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    document.getElementById('result').innerHTML = '';
+                    document.getElementById('result').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        
+        async function analyzeSkinStatus() {
+            const img = document.getElementById('imagePreview');
+            if (!img.src) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            document.getElementById('result').innerText = 'Analyzing... Please wait a moment.';
+            document.getElementById('result').style.display = 'block';
+
+            try {
+                
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const formData = new FormData();
+                formData.append('image_file', blob, 'image.jpg');
+                formData.append('api_key', apiKey);
+                formData.append('api_secret', apiSecret);
+                formData.append('return_attributes', 'skinstatus');
+
+                
+                const apiResponse = await fetch('https://api-us.faceplusplus.com/facepp/v3/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!apiResponse.ok) {
+                    throw new Error(`HTTP error! status: ${apiResponse.status}`);
+                }
+
+                const data = await apiResponse.json();
+
+                if (data.faces && data.faces.length > 0) {
+                    const skinStatus = data.faces[0].attributes.skinstatus;
+                    displayResult(skinStatus);
+                } else {
+                    document.getElementById('result').innerText = 'No face detected or unable to analyze skin status. Please try another image.';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerText = 'Error: Unable to analyze the image. Please try again later.';
+            }
+        }
+
+        
+        function displayResult(skinStatus) {
+            let resultHTML = `
+                <h2>Skin Status Analysis</h2>
+                <ul>
+                    <li>Acne: ${skinStatus.acne}</li>
+                    <li>Dark Circle: ${skinStatus.dark_circle}</li>
+                    <li>Stain: ${skinStatus.stain}</li>
+                    <li>Health: ${skinStatus.health}</li>
+                </ul>
+            `;
+            document.getElementById('result').innerHTML = resultHTML;
+        }
+
+        document.getElementById('imageInput').addEventListener('change', previewImage);
+    </script>
+</body>
+</html>
